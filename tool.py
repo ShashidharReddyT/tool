@@ -140,13 +140,13 @@ echo -e "${BLUE}==================================================${NC}"
 
 if [ ! -s "$TARGET/arjun_params.txt" ] || [ ! -s "$TARGET/paramfinder.txt" ] || [ ! -s "$TARGET/secretfinder.txt" ]; then
     echo -e "${GREEN}[+] Running arjun to find hidden HTTP parameters in discovered URLs. This can reveal new attack vectors.${NC}"
-    run_tool arjun -i $TARGET/all_urls.txt -o $TARGET/arjun_params.txt
+    run_tool /root/.local/bin/arjun -i $TARGET/all_urls.txt -o $TARGET/arjun_params.txt
 
     echo -e "${GREEN}[+] Running paramfinder to identify more parameters. This tool helps in finding request parameters.${NC}"
-    run_tool paramfinder -l $TARGET/all_urls.txt -o $TARGET/paramfinder.txt
+    cat $TARGET/all_urls.txt | run_tool paramfinder -o $TARGET/paramfinder.txt
 
     echo -e "${GREEN}[+] Running secretfinder to identify sensitive information (secrets) in discovered URLs, including JavaScript files.${NC}"
-    run_tool secretfinder -i $TARGET/all_urls.txt -o $TARGET/secretfinder.txt
+    run_tool python3 /home/kali/Desktop/geminiai/SecretFinder/SecretFinder.py -i $TARGET/all_urls.txt -o $TARGET/secretfinder.txt
 
     echo -e "${GREEN}[+] Parameter discovery complete. Results saved to $TARGET/arjun_params.txt, $TARGET/paramfinder.txt and $TARGET/secretfinder.txt${NC}"
 else
@@ -175,7 +175,7 @@ echo -e "${YELLOW}Note: Gitleaks requires a git repository. You need to manually
 # General Vulnerability Scanning
 if [ ! -s "$TARGET/nuclei_output.json" ]; then
     echo -e "${GREEN}[+] Running Nuclei scanner with templates from /root/nuclei-templates. This scans for a wide range of vulnerabilities.${NC}"
-    run_tool nuclei -l $TARGET/all_urls.txt -t /root/nuclei-templates -o $TARGET/nuclei_output.json
+    run_tool timeout 1800 nuclei -l $TARGET/all_urls.txt -t /root/nuclei-templates -o $TARGET/nuclei_output.json
 else
     echo -e "${YELLOW}[!] Nuclei scanning already completed (found $TARGET/nuclei_output.json). Skipping.${NC}"
 fi
@@ -191,9 +191,9 @@ fi
 # Subdomain Takeover
 if [ ! -s "$TARGET/subjack_takeover.txt" ] || [ ! -s "$TARGET/subzy_takeover.json" ]; then
     echo -e "${GREEN}[+] Running subjack to check for subdomain takeover vulnerabilities. This identifies dangling DNS records.${NC}"
-    run_tool subjack -w $TARGET/live_hosts.txt -t 100 -timeout 30 -o $TARGET/subjack_takeover.txt
+    run_tool subjack -w $TARGET/live_hosts.txt -t 100 -timeout 120 -o $TARGET/subjack_takeover.txt
     echo -e "${GREEN}[+] Running subzy to check for subdomain takeover vulnerabilities. This is another tool for detecting subdomain takeovers.${NC}"
-    cat $TARGET/live_hosts.txt | run_tool subzy --hide_fails > $TARGET/subzy_takeover.json
+    run_tool subzy run --targets $TARGET/live_hosts.txt --hide_fails --output $TARGET/subzy_takeover.json
 
     echo -e "${GREEN}[+] Subdomain takeover checks complete. Results saved to $TARGET/subjack_takeover.txt and $TARGET/subzy_takeover.json${NC}"
 else
@@ -210,7 +210,7 @@ echo -e "${BLUE}==================================================${NC}"
 
 if [ ! -d "$TARGET/screenshots" ]; then
     echo -e "${GREEN}[+] Taking screenshots of live HTTP/HTTPS hosts using gowitness. Screenshots help in quickly identifying interesting targets.${NC}"
-    run_tool gowitness file -f $TARGET/live_http_hosts.txt -P $TARGET/screenshots/
+    run_tool gowitness scan file -f $TARGET/live_http_hosts.txt -s $TARGET/screenshots/
 
     echo -e "${GREEN}[+] Visual reconnaissance complete. Screenshots saved to $TARGET/screenshots/${NC}"
 else
